@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory
 import android.util.Base64
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.gemmaremember.app.ai.AiMode
 import com.gemmaremember.app.ai.GemmaEngine
 import com.gemmaremember.app.data.db.AppDatabase
 import com.gemmaremember.app.data.model.*
@@ -51,7 +52,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         val name = prefs.getString("patientName", null)
         _uiState.update { it.copy(
             patientName = name ?: "",
-            setupComplete = name != null
+            setupComplete = name != null,
+            isModelReady = gemma.isReady()
         ) }
 
         // Load existing messages
@@ -68,19 +70,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        // Check model status
-        viewModelScope.launch {
-            _uiState.update { it.copy(isModelReady = gemma.isModelDownloaded()) }
-            if (gemma.isModelDownloaded()) {
+        // If local mode with model downloaded, initialize
+        if (gemma.getMode() == AiMode.LOCAL && gemma.isModelDownloaded()) {
+            viewModelScope.launch {
                 try {
-                    gemma.initialize()
+                    gemma.initializeLocal()
                     _uiState.update { it.copy(isModelReady = true) }
-                } catch (e: Exception) {
-                    // Model file corrupted — will need re-download
-                    _uiState.update { it.copy(isModelReady = false) }
-                }
+                } catch (_: Exception) {}
             }
         }
+    }
+
+    fun setApiMode(key: String) {
+        gemma.setApiMode(key)
+        _uiState.update { it.copy(isModelReady = true) }
     }
 
     fun saveName(name: String) {
@@ -105,7 +108,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 gemma.downloadModel { progress ->
                     _uiState.update { it.copy(downloadProgress = progress) }
                 }
-                gemma.initialize()
+                gemma.initializeLocal()
                 _uiState.update { it.copy(isModelReady = true, isDownloading = false) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isDownloading = false) }

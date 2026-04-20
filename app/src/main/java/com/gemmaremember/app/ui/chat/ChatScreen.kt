@@ -51,6 +51,10 @@ fun ChatScreen(viewModel: ChatViewModel) {
 
 @Composable
 private fun SetupScreen(viewModel: ChatViewModel, state: ChatUiState) {
+    var apiKey by remember { mutableStateOf("") }
+    var showApiInput by remember { mutableStateOf(false) }
+    var showLocalDownload by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -75,17 +79,80 @@ private fun SetupScreen(viewModel: ChatViewModel, state: ChatUiState) {
                 )
                 Spacer(Modifier.height(8.dp))
                 Text("${state.downloadProgress}%", fontSize = 14.sp, color = Color(0xFF5088C3))
-            } else {
+            } else if (showApiInput) {
+                OutlinedTextField(
+                    value = apiKey,
+                    onValueChange = { apiKey = it },
+                    placeholder = { Text("Enter Gemini API key") },
+                    shape = RoundedCornerShape(14.dp),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                Text("Free key from aistudio.google.com/apikey", fontSize = 12.sp, color = Color(0xFF5088C3))
+                Spacer(Modifier.height(16.dp))
                 Button(
-                    onClick = { viewModel.downloadModel() },
+                    onClick = {
+                        if (apiKey.isNotBlank()) {
+                            viewModel.setApiMode(apiKey.trim())
+                        }
+                    },
                     shape = RoundedCornerShape(50),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A6DD4)),
-                    modifier = Modifier.fillMaxWidth().height(56.dp)
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    enabled = apiKey.isNotBlank()
                 ) {
-                    Text("Download Gemma 4 (2.6 GB)", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Continue", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
                 Spacer(Modifier.height(12.dp))
-                Text("One-time download. Works offline after.", fontSize = 13.sp, color = Color(0xFF8B8A99))
+                TextButton(onClick = { showApiInput = false }) {
+                    Text("Back", color = Color(0xFF5088C3))
+                }
+            } else {
+                // Mode selection cards
+                Surface(
+                    onClick = { showApiInput = true },
+                    shape = RoundedCornerShape(18.dp),
+                    color = Color.White,
+                    shadowElevation = 2.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(modifier = Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Surface(shape = RoundedCornerShape(14.dp), color = Color(0xFFEEF4FF), modifier = Modifier.size(52.dp)) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Filled.Cloud, contentDescription = null, tint = Color(0xFF1A6DD4), modifier = Modifier.size(28.dp))
+                            }
+                        }
+                        Spacer(Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Cloud (Recommended)", fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = Color(0xFF0D3268))
+                            Text("Uses Gemini API. Fast, no download.", fontSize = 13.sp, color = Color(0xFF5088C3))
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                Surface(
+                    onClick = { showLocalDownload = true; viewModel.downloadModel() },
+                    shape = RoundedCornerShape(18.dp),
+                    color = Color.White,
+                    shadowElevation = 2.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(modifier = Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Surface(shape = RoundedCornerShape(14.dp), color = Color(0xFFEEF4FF), modifier = Modifier.size(52.dp)) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Filled.PhoneAndroid, contentDescription = null, tint = Color(0xFF1A6DD4), modifier = Modifier.size(28.dp))
+                            }
+                        }
+                        Spacer(Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("On-Device", fontWeight = FontWeight.SemiBold, fontSize = 16.sp, color = Color(0xFF0D3268))
+                            Text("Downloads Gemma 4 (2.6 GB). Works offline.", fontSize = 13.sp, color = Color(0xFF5088C3))
+                        }
+                    }
+                }
             }
         }
     }
